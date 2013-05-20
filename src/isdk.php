@@ -10,13 +10,14 @@ if (!function_exists('xmlrpc_encode_entitites')) {
   include('xmlrpc-3.0/lib/xmlrpc.inc');
 }
 
-class iSDK {
+class iSDK
+{
   const VAL_ON    = 'on';
   const VAL_OFF   = 'off';
   const VAL_KILL  = 'kill';
   const VAL_THROW = 'throw';
 
-  ###Connect by using the Connection file or by passing in the variables###
+  // Connect by using the Connection file or by passing in the variables
   public function cfgCon($name, $key = '', $dbOn = self::VAL_ON, $type = 'i')
   {
     $this->debug = (in_array($key, self::getKeyTypes()) ? $key : $dbOn);
@@ -126,44 +127,52 @@ class iSDK {
       return TRUE;
   }
 
-  ###Worthless public function, used to validate a connection###
-  public function appEcho($txt)
+  /**
+   * Function to check
+   *
+   * @param string $text Text to echo
+   * @return string
+   */
+  public function appEcho($text)
   {
     $cArray = array(
-      php_xmlrpc_encode($txt)
+      php_xmlrpc_encode($text)
     );
 
     return $this->methodCaller('DataService.echo', $cArray);
   }
 
   ###Method Caller###
-  public function methodCaller($service,$callArray) {
-      ###Set up the call###
-      $call = new xmlrpcmsg($service, $callArray);
-      ###Send the call###
-      $result = $this->client->send($call);
-      ###Check the returned value to see if it was successful and return it###
-      if(!$result->faultCode()) {
-        return $result->value();
-      } else {
-        if ($this->debug=="kill"){
-          die("ERROR: " . $result->faultCode() . " - " .
-  $result->faultString());
-        } elseif ($this->debug=="on") {
-          return "ERROR: " . $result->faultCode() . " - " .
-  $result->faultString();
-        } elseif ($this->debug=="throw") {
+  public function methodCaller($service, $callArray)
+  {
+    $call = new xmlrpcmsg($service, $callArray);
+
+    $result = $this->client->send($call);
+
+    // Is everything goes well or not?
+    if(!$result->faultCode()) {
+      return $result->value();
+    }
+
+    switch ($this->debug) {
+      case self::VAL_KILL:
+          die("ERROR: " . $result->faultCode() . " - " . $result->faultString());
+        break;
+      case self::VAL_ON:
+          return "ERROR: " . $result->faultCode() . " - ". $result->faultString();
+        break;
+      case self::VAL_THROW:
           throw new iSDKException($result->faultString(), $result->faultCode());
-        } elseif ($this->debug=="off") {
-          //ignore!
-        }
-      }
+        break;
+      case self::VAL_OFF:
+      default:
+        break;
+    }
   }
 
-
-  /////////////////////////////////////////////////////////
-  //////////////////// FILE  SERVICE ////////////////////// /////////////////////////////////////////////////////////
-  //Available in Version 18.x+
+  /**
+   * FILE SERVICE
+   */
   //String getFile(String key, int fileId) - returns base64 encoded file data
   public function getFile($fileID) {
 
@@ -308,46 +317,51 @@ class iSDK {
   }
 
   ###Returns next step in a campaign###
-  public function getNextCampaignStep($cid, $campId) {
+  public function getNextCampaignStep($cid, $campId)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode((int)$cid),
+      php_xmlrpc_encode((int)$campId)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode((int)$cid),
-                      php_xmlrpc_encode((int)$campId));
-      return
-  $this->methodCaller("ContactService.getNextCampaignStep",$carray);
+    return $this->methodCaller('ContactService.getNextCampaignStep', $cArray);
   }
 
   ###Returns step details for a contact in a campaign###
-  public function getCampaigneeStepDetails($cid, $stepId) {
+  public function getCampaigneeStepDetails($cid, $stepId)
+  {
+    $carray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode((int)$cid),
+      php_xmlrpc_encode((int)$stepId)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode((int)$cid),
-                      php_xmlrpc_encode((int)$stepId));
-      return
-  $this->methodCaller("ContactService.getCampaigneeStepDetails",$carray);
+    return $this->methodCaller("ContactService.getCampaigneeStepDetails", $carray);
   }
 
   ###Reschedules a campaign step for a list of contacts###
-  public function rescheduleCampaignStep($cidList, $campId) {
+  public function rescheduleCampaignStep($cidList, $campId)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($cidList),
+      php_xmlrpc_encode((int)$campId)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($cidList),
-                      php_xmlrpc_encode((int)$campId));
-      return
-  $this->methodCaller("ContactService.rescheduleCampaignStep",$carray);
+    return $this->methodCaller('ContactService.rescheduleCampaignStep', $cArray);
   }
 
   ###public function to remove a contact from a campaign###
-  public function campRemove($cid, $campId) {
+  public function campRemove($cid, $campId)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode((int)$cid),
+      php_xmlrpc_encode((int)$campId)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode((int)$cid),
-                      php_xmlrpc_encode((int)$campId));
-      return $this->methodCaller("ContactService.removeFromCampaign",$carray);
+    return $this->methodCaller('ContactService.removeFromCampaign', $cArray);
   }
 
   ###public function to pause a contacts campaign###
@@ -361,23 +375,28 @@ class iSDK {
   }
 
   ###public function to run an Action Sequence###
-  public function runAS($cid, $aid) {
+  public function runAS($cid, $aid)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode((int)$cid),
+      php_xmlrpc_encode((int)$aid)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode((int)$cid),
-                      php_xmlrpc_encode((int)$aid));
-      return $this->methodCaller("ContactService.runActionSequence",$carray);
+    return $this->methodCaller('ContactService.runActionSequence', $cArray);
   }
 
   ###public function to create a note from a note template
-  public function applyActivityHistoryTemplate($contactId, $historyId, $userId){
-    $carray = array(
+  public function applyActivityHistoryTemplate($contactId, $historyId, $userId)
+  {
+    $cArray = array(
       php_xmlrpc_encode($this->key),
       php_xmlrpc_encode((int)$contactId),
       php_xmlrpc_encode((int)$historyId),
-      php_xmlrpc_encode((int)$userId));
-    return $this->methodCaller("ContactService.applyActivityHistoryTemplate",$carray);
+      php_xmlrpc_encode((int)$userId)
+    );
+
+    return $this->methodCaller('ContactService.applyActivityHistoryTemplate', $cArray);
   }
 
 
@@ -423,99 +442,162 @@ class iSDK {
     return $this->methodCaller('DataService.add', $cArray);
   }
 
-  public function dsAddWithImage($tName,$iMap) {
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($tName),
-                      php_xmlrpc_encode($iMap,array('auto_dates','auto_base64')));
+  /**
+   * Adds a record to the specified table in Infusionsoft. Images will be base64 encoded
+   *
+   * @param string $table  The Infusionsoft database table name
+   * @param array  $values An associative array of data you would like stored into this new row in the table
+   * @return integer
+   * @see http://help.infusionsoft.com/api-docs/dataservice#add
+   */
+  public function dsAddWithImage($table, $values)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode($values, array('auto_dates', 'auto_base64'))
+    );
 
-      return $this->methodCaller("DataService.add",$carray);
+    return $this->methodCaller('DataService.add', $cArray);
   }
 
-  public function dsDelete($tName,$id) {
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($tName),
-                      php_xmlrpc_encode((int)$id));
+  /**
+   * Deletes the specified record in the given table from the database
+   *
+   * @param string  $table The table you would like to delete the record from
+   * @param integer $id    The ID number of the record you want to delete
+   * @return boolean
+   * @see http://help.infusionsoft.com/api-docs/dataservice#delete
+   */
+  public function dsDelete($table, $id)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode((int)$id)
+    );
 
-      return $this->methodCaller("DataService.delete",$carray);
+    return $this->methodCaller('DataService.delete', $cArray);
   }
 
-  ###public function for DataService.update method###
-  public function dsUpdate($tName,$id,$iMap) {
+  /**
+   * Updates the specified record (indicated by ID) with the data provided
+   *
+   * @param string  $table  The Infusionsoft database table name
+   * @param integer $id     The ID number of the record you would like updated on the given table
+   * @param array   $values An associative array of data you would like updated
+   * @return integer
+   * @see http://help.infusionsoft.com/api-docs/dataservice#update
+   */
+  public function dsUpdate($table, $id, array $values)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode((int)$id),
+      php_xmlrpc_encode($values, array('auto_dates'))
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($tName),
-                      php_xmlrpc_encode((int)$id),
-                      php_xmlrpc_encode($iMap, array('auto_dates')));
-
-      return $this->methodCaller("DataService.update",$carray);
+    return $this->methodCaller('DataService.update', $cArray);
   }
 
-  public function dsUpdateWithImage($tName,$id,$iMap) {
+  /**
+   * Updates the specified record (indicated by ID) with the data provided. Images will be base64-encoded
+   *
+   * @param string  $table  The Infusionsoft database table name
+   * @param integer $id     The ID number of the record you would like updated on the given table
+   * @param array   $values An associative array of data you would like updated
+   * @return integer
+   * @see http://help.infusionsoft.com/api-docs/dataservice#update
+   */
+  public function dsUpdateWithImage($table, $id, $values)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode((int)$id),
+      php_xmlrpc_encode($values, array('auto_dates','auto_base64'))
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($tName),
-                      php_xmlrpc_encode((int)$id),
-                      php_xmlrpc_encode($iMap, array('auto_dates','auto_base64')));
-
-      return $this->methodCaller("DataService.update",$carray);
+    return $this->methodCaller('DataService.update', $cArray);
   }
 
-  ###public function for DataService.load method###
-  public function dsLoad($tName,$id,$rFields) {
+  /**
+   * Loads a struct with data from the given database record
+   *
+   * @param string  $table        Infusionsoft database table name from which you want to load a record
+   * @param integer $recordId     The unique Id number for the record you would like to load
+   * @param array   $wantedFields The fields you would like returned from this row in the database
+   * @return array
+   * @see http://help.infusionsoft.com/api-docs/dataservice#load
+   */
+  public function dsLoad($table, $recordId, $wantedFields)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode((int)$recordId),
+      php_xmlrpc_encode($wantedFields)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($tName),
-                      php_xmlrpc_encode((int)$id),
-                      php_xmlrpc_encode($rFields));
-
-      return $this->methodCaller("DataService.load",$carray);
+    return $this->methodCaller('DataService.load', $cArray);
   }
 
-  ###public function for DataService.findByField method###
-  public function dsFind($tName,$limit,$page,$field,$value,$rFields) {
+  /**
+   *
+   * @param string  $table      The Infusionsoft database table name
+   * @param integer $limit      How many records you would like returned. The maximum possible is 1000
+   * @param integer $page       The page of results you would like returned. The first page is page 0 (loop through pages to get more than 1000 records)
+   * @param string $fieldName   The name of the field you would like to run the search on
+   * @param string $fieldValue  The value stored in the field you would like to search by
+   * @param array $returnFields The fields you would like returned from the table you are searching on
+   * @return array
+   * @see http://help.infusionsoft.com/api-docs/dataservice#findByField
+   */
+  public function dsFind($table, $limit, $page, $fieldName, $fieldValue, array $returnFields)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode((int)$limit),
+      php_xmlrpc_encode((int)$page),
+      php_xmlrpc_encode($fieldName),
+      php_xmlrpc_encode($fieldValue),
+      php_xmlrpc_encode($returnFields)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($tName),
-                      php_xmlrpc_encode((int)$limit),
-                      php_xmlrpc_encode((int)$page),
-                      php_xmlrpc_encode($field),
-                      php_xmlrpc_encode($value),
-                      php_xmlrpc_encode($rFields));
-
-      return $this->methodCaller("DataService.findByField",$carray);
+    return $this->methodCaller('DataService.findByField', $cArray);
   }
 
   ###public function for DataService.query method###
-  public function dsQuery($tName,$limit,$page,$query,$rFields) {
+  public function dsQuery($table, $limit, $page, $query, array $returnFields)
+  {
+    $cArray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode((int)$limit),
+      php_xmlrpc_encode((int)$page),
+      php_xmlrpc_encode($query, array('auto_dates')),
+      php_xmlrpc_encode($returnFields)
+    );
 
-      $carray = array(
-                      php_xmlrpc_encode($this->key),
-                      php_xmlrpc_encode($tName),
-                      php_xmlrpc_encode((int)$limit),
-                      php_xmlrpc_encode((int)$page),
-                      php_xmlrpc_encode($query,array('auto_dates')),
-                      php_xmlrpc_encode($rFields));
-
-      return $this->methodCaller("DataService.query",$carray);
+    return $this->methodCaller('DataService.query', $cArray);
   }
-  public function dsQueryOrderBy($tName,$limit,$page,$query,$rFields,$orderByField,$ascending = TRUE) {
-    $carray = array(
-          php_xmlrpc_encode($this->key),
-          php_xmlrpc_encode($tName),
-          php_xmlrpc_encode((int)$limit),
-          php_xmlrpc_encode((int)$page),
-          php_xmlrpc_encode($query,array('auto_dates')),
-          php_xmlrpc_encode($rFields),
-        php_xmlrpc_encode($orderByField),
-        php_xmlrpc_encode((bool)$ascending));
 
-        return $this->methodCaller("DataService.query",$carray);
+  public function dsQueryOrderBy($table, $limit, $page, $query, $rFields, $orderByField, $ascending = true)
+  {
+    $carray = array(
+      php_xmlrpc_encode($this->key),
+      php_xmlrpc_encode($table),
+      php_xmlrpc_encode((int)$limit),
+      php_xmlrpc_encode((int)$page),
+      php_xmlrpc_encode($query, array('auto_dates')),
+      php_xmlrpc_encode($rFields),
+      php_xmlrpc_encode($orderByField),
+      php_xmlrpc_encode((bool)$ascending)
+    );
+
+    return $this->methodCaller("DataService.query",$carray);
   }
 
   ###Adds a custom field to Infusionsoft###
